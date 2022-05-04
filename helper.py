@@ -26,6 +26,10 @@ def Rn_matrix(n):
     return np.array([[1, 0],
                     [0,np.exp(1j*np.pi/(2**(n-1)))]])
 
+def Rndag_matrix(n):
+    return np.array([[1, 0],
+                    [0,np.exp(-1j*np.pi/(2**(n-1)))]])
+
 CNOT_matrix=np.array([[1,0,0,0],
                       [0,1,0,0],
                       [0,0,0,1],
@@ -45,6 +49,13 @@ def CRn_tensor(n):
     B = np.zeros((2,2))
     CRn_matrix = np.block([[A,B],
                           [B,Rn_matrix(n)]])
+    return np.reshape(CRn_matrix, (2,2,2,2))
+
+def CRndag_tensor(n):
+    A = np.eye(2)
+    B = np.zeros((2,2))
+    CRn_matrix = np.block([[A,B],
+                          [B,Rndag_matrix(n)]])
     return np.reshape(CRn_matrix, (2,2,2,2))
 
 def CUrand_tensor(dim):
@@ -77,6 +88,10 @@ def Rn(i,n,reg):
     reg.psi=np.tensordot(Rn_matrix(n),reg.psi,(1,i)) 
     reg.psi=np.moveaxis(reg.psi,0,i)
 
+def Rndag(i,n,reg): 
+    reg.psi=np.tensordot(Rndag_matrix(n),reg.psi,(1,i)) 
+    reg.psi=np.moveaxis(reg.psi,0,i)
+
 def CNOT(control, target, reg):
     reg.psi=np.tensordot(CNOT_tensor, reg.psi, ((2,3),(control, target))) 
     reg.psi=np.moveaxis(reg.psi,(0,1),(control,target))   
@@ -88,6 +103,10 @@ def CZ(control, target, reg):
 def CRn(control, target, n, reg):
     reg.psi=np.tensordot(CRn_tensor(n), reg.psi, ((2,3),(control, target))) 
     reg.psi=np.moveaxis(reg.psi,(0,1),(control,target))   
+
+def CRndag(control, target, n, reg):
+    reg.psi=np.tensordot(CRndag_tensor(n), reg.psi, ((2,3),(control, target))) 
+    reg.psi=np.moveaxis(reg.psi,(0,1),(control,target)) 
 
 def CUrand(control, target, dim, reg):
     total_dim = 2**dim
@@ -116,7 +135,6 @@ def measure(i, reg):
         projected=project(i,1,reg)
         reg.psi=projected/norm(projected)
         return 1
-
 
 def reducedrho(qb, reg):
     """Calculated partial trace to remove flag (qubit i)"""
@@ -152,7 +170,6 @@ def randstate(nflags, reg):
         binint = tuple([int(bit) for bit in bin])
         D[(0,)*nflags+binint] = raw[i]/denom
     setstate(D, reg)
-
 
 def fidelity(rho1, rho2):
     rho1_sqrt = sqrtm(rho1)
