@@ -68,6 +68,24 @@ def CUrand_tensor(dim):
                           [B,U]])
     return np.reshape(CUrand_matrix, (2,)*total_dim)
 
+def Ccustom2_tensor(custom):
+    """custom is 2x2 matrix"""
+    dim = 2**2
+    block_dim = int(dim/2)
+    A = np.eye(block_dim)
+    B = np.zeros((block_dim,block_dim))
+    Ccustom2_matrix = np.block([[A,B],[B, custom]])
+    return np.reshape(Ccustom2_matrix, (2,)*dim)
+
+def Ccustom3_tensor(custom):
+    """custom is 4x4 matrix"""
+    dim = 2**3
+    block_dim = int(dim/2)
+    A = np.eye(block_dim)
+    B = np.zeros((block_dim,block_dim))
+    Ccustom3_matrix = np.block([[A,B],[B, custom]])
+    return np.reshape(Ccustom3_matrix, (2,)*dim)
+
 def X(i,reg): 
     reg.psi=np.tensordot(X_matrix,reg.psi,(1,i)) 
     reg.psi=np.moveaxis(reg.psi,0,i)
@@ -112,6 +130,20 @@ def CUrand(control, target, dim, reg):
     total_dim = 2**dim
     reg.psi=np.tensordot(CUrand_tensor(dim), reg.psi, ((total_dim-2,total_dim-1),(control, target))) 
     reg.psi=np.moveaxis(reg.psi,(0,1),(control,target)) 
+
+def Ccustom2(custom, reg):
+    """make sure the control qubit is always first"""
+    matrix_vec = Ccustom2_tensor(custom).flatten()
+    matrix_op = np.reshape(matrix_vec, (4,4))
+    res_vec = np.dot(matrix_op, reg.psi.flatten())
+    reg.psi = np.reshape(res_vec, (2,2))
+
+def Ccustom3(custom, reg):
+    """make sure the control qubit is always first"""
+    matrix_vec = Ccustom3_tensor(custom).flatten()
+    matrix_op = np.reshape(matrix_vec, (8,8))
+    res_vec = np.dot(matrix_op, reg.psi.flatten())
+    reg.psi = np.reshape(res_vec, (2,2,2)) 
 
 def measure(i, reg): 
     z_proj=[np.array([[1,0],[0,0]]), np.array([[0,0],[0,1]])] 
