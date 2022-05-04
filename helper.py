@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.linalg import norm 
+from scipy.linalg import norm, sqrtm
 from scipy.stats import unitary_group
 
 class Reg: 
@@ -8,7 +8,7 @@ class Reg:
         self.psi=np.zeros((2,)*n) 
         self.psi[(0,)*n]=1
     def rho(self):
-        return np.matmul(np.transpose(self.psi),self.psi)
+        return np.outer(self.psi,self.psi)
 
 X_matrix=np.array([[0, 1],
                     [1,0]])
@@ -118,14 +118,43 @@ def measure(i, reg):
         return 1
 
 
-def reduced(i, reg):
+def reducedrho(qb, reg):
     """Calculated partial trace to remove flag (qubit i)"""
-    np.transpose(reg.psi)
+    moved_psi = reg.psi
+    for i in sorted(qb, reverse=True):
+        moved_psi = np.moveaxis(moved_psi,i,0)
+    dim = np.size(reg.psi)
+    reddim = 2**len(qb)
+    rho = np.outer(moved_psi, moved_psi)
+    reshaped_rho = np.reshape(rho, [reddim, int(dim/reddim), reddim, int(dim/reddim)])
+    return np.einsum('ijik->jk', reshaped_rho)
+    #moved_psi = np.moveaxis(reg.psi,i,0)
+    #dim = np.size(reg.psi)
+    #rho = np.outer(moved_psi, moved_psi)
+    #reshaped_rho = np.reshape(rho, [2, int(dim/2), 2, int(dim/2)])
+    #return np.einsum('ijik->jk', reshaped_rho)
     
+def setstate(D, reg):
+    """Calculate initial state
+    D = dictionary {(position): val}
+    """
+    for pos, val in D.items():
+        reg.psi[pos] = val
 
-def setstate():
-    """Calculate initial state"""
-    pass
-
-def randstate():
+def randstate(nflags, reg):
     """Calculate random state"""
+    dim = np.size(reg.psi) / (2**nflags)
+    raw = np.random.uniform(0,1,dim)
+    denom = np.sqrt(np.sum(np.square(raw)))
+    D = {}
+    for i in dim:
+        bin =  list(np.binary_repr(i))
+        binint = tuple([int(bit) for bit in bin])
+        D[(0,)*nflags+binint] = raw[i]/denom
+    setstate(D, reg)
+
+
+def fidelity(rho1, rho2):
+    rho1_sqrt = sqrtm(rho1)
+    prod = np.matmul(rho1_sqrt,(np.matmul(rho2, rho1_sqrt)))
+    return np.real(np.trace(sqrtm(prod)))
