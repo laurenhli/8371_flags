@@ -175,7 +175,7 @@ def Ccustom3(custom, reg):
 
 def Ccustom4(custom, reg):
     """make sure the control qubit is always first"""
-    matrix_vec = Ccustom3_tensor(custom).flatten()
+    matrix_vec = Ccustom4_tensor(custom).flatten()
     matrix_op = np.reshape(matrix_vec, (16,16))
     res_vec = np.dot(matrix_op, reg.psi.flatten())
     reg.psi = np.reshape(res_vec, (2,2,2,2)) 

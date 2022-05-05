@@ -31,25 +31,27 @@ Pauliflag = {'IX':np.kron(I_matrix, X_matrix),
              'ZX':np.kron(Z_matrix, X_matrix),
              'ZY':np.kron(Z_matrix, Y_matrix),
              'ZZ':np.kron(Z_matrix, Z_matrix)}
+onePaulierr = {'I':I_matrix,'X':X_matrix,'Y':Y_matrix,'Z':Z_matrix,}
 
 def apply_noise(i,j,p, reg, err=False):
     if err==False:
         if np.random.uniform(0,1) < p: #error occured
             err = np.random.choice(Paulierr)
-    ## error here
-    if err[0] == 'X':
-        X(i, reg)
-    elif err[0] == 'Y':
-        Y(i, reg)
-    elif err[0] == 'Z':
-        Z(i, reg)
+    if err != False:
+        ## error here
+        if err[0] == 'X':
+            X(i, reg)
+        elif err[0] == 'Y':
+            Y(i, reg)
+        elif err[0] == 'Z':
+            Z(i, reg)
 
-    if err[1] == 'X':
-        X(j, reg)
-    elif err[1] == 'Y':
-        Y(j, reg)
-    elif err[1] == 'Z':
-        Z(j, reg)
+        if err[1] == 'X':
+            X(j, reg)
+        elif err[1] == 'Y':
+            Y(j, reg)
+        elif err[1] == 'Z':
+            Z(j, reg)
 
 def CU_flag(state_dict, n, flag, q1, q2, p, randuflag=True, err=False):
     if randuflag: #create random unitary flag
