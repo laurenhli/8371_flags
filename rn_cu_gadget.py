@@ -32,7 +32,26 @@ Pauliflag = {'IX':np.kron(I_matrix, X_matrix),
              'ZY':np.kron(Z_matrix, Y_matrix),
              'ZZ':np.kron(Z_matrix, Z_matrix)}
 
-def CU_flag(start, n, flag, q1, q2, err=False, randuflag=True):
+def apply_noise(i,j,p, reg, err=False):
+    if err==False:
+        if np.random.uniform(0,1) < p: #error occured
+            err = np.random.choice(Paulierr)
+    ## error here
+    if err[0] == 'X':
+        X(i, reg)
+    elif err[0] == 'Y':
+        Y(i, reg)
+    elif err[0] == 'Z':
+        Z(i, reg)
+
+    if err[1] == 'X':
+        X(j, reg)
+    elif err[1] == 'Y':
+        Y(j, reg)
+    elif err[1] == 'Z':
+        Z(j, reg)
+
+def CU_flag(state_dict, n, flag, q1, q2, p, randuflag=True, err=False):
     if randuflag: #create random unitary flag
         F = unitary_group.rvs(4)
     else: #random pauli flag
@@ -41,55 +60,51 @@ def CU_flag(start, n, flag, q1, q2, err=False, randuflag=True):
     Fdag = np.array(np.matrix(F).getH())
     Udag = np.array(np.matrix(U).getH())
     Fprime = multi_dot([U, Fdag, Udag])
+
+    #random or even initial state
+    #state_dict = randstate(1, 3)
+    #state_dict = even_start
     
     #clean for fidelity calculation
     reg2=Reg(3)
-    setstate(start, reg2)
+    setstate(state_dict, reg2)
     CRn(q1, q2, n, reg2)
     rho2 = reducedrho([flag], reg2)
 
     #flag circuit
     reg=Reg(3)
-    setstate(start, reg)
+    setstate(state_dict, reg)
     H(flag, reg)
     Ccustom3(F, reg) #random flag F
     CRn(q1, q2, n, reg) #two-qubit gate U
-
-    if err: ## error here
-        if err[0] == 'X':
-            X(q1, reg)
-        elif err[0] == 'Y':
-            Y(q1, reg)
-        elif err[0] == 'Z':
-            Z(q1, reg)
-
-        if err[1] == 'X':
-            X(q2, reg)
-        elif err[1] == 'Y':
-            Y(q2, reg)
-        elif err[1] == 'Z':
-            Z(q2, reg)
-
+    apply_noise(q1, q2, p, reg, err)
+    
     Ccustom3(Fprime, reg) #flag Fprime = U Fdag Udag
     H(flag, reg) 
     rho = reducedrho([flag], reg)
-    return measure(flag, reg), fidelity(rho, rho2)
+    fid_calc = fidelity(rho, rho2)
+    if fid_calc != None:
+        return measure(flag, reg), fid_calc
+    else:
+        return 'failed', 'failed'
 
-def flag_fid(nflags, n, flag, q1, q2, p, err=False, randuflag=True):
+def flag_fid(state_dict, nflags, n, flag, q1, q2, p, randuflag=True, err=False):
     fid_res = []
-    i = 0
+    fid_rej = []
     rejected = 0
-    while i < nflags:
-        if np.random.uniform(0,1) < p: #error occured
-            err = np.random.choice(Paulierr)
-        flag_res, fid = CU_flag(D00, n, flag, q1, q2, err, randuflag)
+    for _ in range(nflags):
+        flag_res, fid = CU_flag(state_dict, n, flag, q1, q2, p, randuflag, err)
+        if flag_res == 'failed':
+            continue
+
         if flag_res == 1:
             rejected += 1
-            continue
-        fid_res.append(fid)
+            fid_rej.append(fid)
+        else:
+            fid_res.append(fid)
         #print('flag#', i, end='\r')
-        i+=1
-    return fid_res, rejected/(nflags+rejected) #reject rate
+
+    return fid_res, fid_rej, rejected/nflags #reject rate
 
 
 

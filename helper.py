@@ -92,6 +92,24 @@ def Ccustom3_tensor(custom):
     Ccustom3_matrix = np.block([[A,B],[B, custom]])
     return np.reshape(Ccustom3_matrix, (2,)*6)
 
+def Ccustom4_tensor(custom):
+    """custom is 8x8 matrix"""
+    dim = 2**4
+    block_dim = int(dim/2)
+    A = np.eye(block_dim)
+    B = np.zeros((block_dim,block_dim))
+    Ccustom4_matrix = np.block([[A,B],[B, custom]])
+    return np.reshape(Ccustom4_matrix, (2,)*8)
+
+def Ccustom5_tensor(custom):
+    """custom is 16x16 matrix"""
+    dim = 2**5
+    block_dim = int(dim/2)
+    A = np.eye(block_dim)
+    B = np.zeros((block_dim,block_dim))
+    Ccustom5_matrix = np.block([[A,B],[B, custom]])
+    return np.reshape(Ccustom5_matrix, (2,)*10)
+
 def X(i,reg): 
     reg.psi=np.tensordot(X_matrix,reg.psi,(1,i)) 
     reg.psi=np.moveaxis(reg.psi,0,i)
@@ -155,6 +173,20 @@ def Ccustom3(custom, reg):
     res_vec = np.dot(matrix_op, reg.psi.flatten())
     reg.psi = np.reshape(res_vec, (2,2,2)) 
 
+def Ccustom4(custom, reg):
+    """make sure the control qubit is always first"""
+    matrix_vec = Ccustom3_tensor(custom).flatten()
+    matrix_op = np.reshape(matrix_vec, (16,16))
+    res_vec = np.dot(matrix_op, reg.psi.flatten())
+    reg.psi = np.reshape(res_vec, (2,2,2,2)) 
+
+def Ccustom5(custom, reg):
+    """make sure the control qubit is always first"""
+    matrix_vec = Ccustom5_tensor(custom).flatten()
+    matrix_op = np.reshape(matrix_vec, (32,32))
+    res_vec = np.dot(matrix_op, reg.psi.flatten())
+    reg.psi = np.reshape(res_vec, (2,2,2,2,2)) 
+
 def measure(i, reg): 
     z_proj=[np.array([[1,0],[0,0]]), np.array([[0,0],[0,1]])] 
     x_proj=[np.array([[1,1],[1,1]])/2, np.array([[1,-1],[-1,1]])/2]
@@ -201,19 +233,27 @@ def setstate(D, reg):
     for pos, val in D.items():
         reg.psi[pos] = val
 
-def randstate(nflags, reg):
+def randstate(flag_count, nqubits):
     """Calculate random state"""
-    dim = np.size(reg.psi) / (2**nflags)
+    dim = int((2**nqubits) / (2**flag_count))
     raw = np.random.uniform(0,1,dim)
     denom = np.sqrt(np.sum(np.square(raw)))
-    D = {}
-    for i in dim:
-        bin =  list(np.binary_repr(i))
+    dict = {}
+    for i in range(dim):
+        bin = np.binary_repr(i)
+        if i==0:
+            bin = '00'
+        elif i==1:
+            bin = '01'
         binint = tuple([int(bit) for bit in bin])
-        D[(0,)*nflags+binint] = raw[i]/denom
-    setstate(D, reg)
+        dict[(0,)*flag_count+binint] = raw[i]/denom
+    return dict
+    #setstate(D, reg)
 
 def fidelity(rho1, rho2):
-    rho1_sqrt = sqrtm(rho1)
-    prod = np.matmul(rho1_sqrt,(np.matmul(rho2, rho1_sqrt)))
-    return np.real(np.trace(sqrtm(prod)))
+    try:
+        rho1_sqrt = sqrtm(rho1)
+        prod = np.matmul(rho1_sqrt,(np.matmul(rho2, rho1_sqrt)))
+        return np.real(np.trace(sqrtm(prod)))
+    except:
+        return None
