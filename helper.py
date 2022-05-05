@@ -8,7 +8,9 @@ class Reg:
         self.psi=np.zeros((2,)*n) 
         self.psi[(0,)*n]=1
     def rho(self):
-        return np.outer(self.psi,self.psi)
+        return np.outer(np.conj(self.psi),self.psi)
+
+I_matrix=np.eye(2)
 
 X_matrix=np.array([[0, 1],
                     [1,0]])
@@ -29,6 +31,10 @@ def Rn_matrix(n):
 def Rndag_matrix(n):
     return np.array([[1, 0],
                     [0,np.exp(-1j*np.pi/(2**(n-1)))]])
+def CRn_matrix(n):
+    A = np.eye(2)
+    B = np.zeros((2,2))
+    return np.block([[A,B], [B,Rn_matrix(n)]])
 
 CNOT_matrix=np.array([[1,0,0,0],
                       [0,1,0,0],
@@ -84,7 +90,7 @@ def Ccustom3_tensor(custom):
     A = np.eye(block_dim)
     B = np.zeros((block_dim,block_dim))
     Ccustom3_matrix = np.block([[A,B],[B, custom]])
-    return np.reshape(Ccustom3_matrix, (2,)*dim)
+    return np.reshape(Ccustom3_matrix, (2,)*6)
 
 def X(i,reg): 
     reg.psi=np.tensordot(X_matrix,reg.psi,(1,i)) 
@@ -131,6 +137,10 @@ def CUrand(control, target, dim, reg):
     reg.psi=np.tensordot(CUrand_tensor(dim), reg.psi, ((total_dim-2,total_dim-1),(control, target))) 
     reg.psi=np.moveaxis(reg.psi,(0,1),(control,target)) 
 
+def Ccustom2_test(control, target, custom, reg):
+    reg.psi=np.tensordot(Ccustom2_tensor(custom), reg.psi, ((2,3),(control, target))) 
+    reg.psi=np.moveaxis(reg.psi,(0,1),(control,target)) 
+
 def Ccustom2(custom, reg):
     """make sure the control qubit is always first"""
     matrix_vec = Ccustom2_tensor(custom).flatten()
@@ -175,7 +185,7 @@ def reducedrho(qb, reg):
         moved_psi = np.moveaxis(moved_psi,i,0)
     dim = np.size(reg.psi)
     reddim = 2**len(qb)
-    rho = np.outer(moved_psi, moved_psi)
+    rho = np.outer(np.conj(moved_psi), moved_psi)
     reshaped_rho = np.reshape(rho, [reddim, int(dim/reddim), reddim, int(dim/reddim)])
     return np.einsum('ijik->jk', reshaped_rho)
     #moved_psi = np.moveaxis(reg.psi,i,0)
